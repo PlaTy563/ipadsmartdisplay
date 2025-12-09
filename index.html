@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Smart Display</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-viewport">
+        <div class="slider-container" id="slider">
+            <!-- PAGE 1: Clock & Weather -->
+            <div class="page page-main">
+                <div class="container">
+                    <!-- Greeting -->
+                    <div class="greeting-section" id="greeting">Hello</div>
+
+                    <!-- Flip Clock -->
+                    <div class="flip-clock">
+                        <!-- Hours Tens -->
+                        <div class="flip-unit" id="h-ten">
+                            <div class="top-half">
+                                <div class="flip-text">0</div>
+                            </div>
+                            <div class="bottom-half">
+                                <div class="flip-text">0</div>
+                            </div>
+                            <div class="top-flip">
+                                <div class="flip-text">0</div>
+                            </div>
+                            <div class="bottom-flip">
+                                <div class="flip-text">0</div>
+                            </div>
+                        </div>
+                        <!-- Hours Ones -->
+                        <div class="flip-unit" id="h-one">
+                            <div class="top-half">
+                                <div class="flip-text">0</div>
+                            </div>
+                            <div class="bottom-half">
+                                <div class="flip-text">0</div>
+                            </div>
+                            <div class="top-flip">
+                                <div class="flip-text">0</div>
+                            </div>
+                            <div class="bottom-flip">
+                                <div class="flip-text">0</div>
+                            </div>
+                        </div>
+
+                        <div class="colon">:</div>
+
+                        <!-- Minutes Tens -->
+                        <div class="flip-unit" id="m-ten">
+                            <div class="top-half">
+                                <div class="flip-text">0</div>
+                            </div>
+                            <div class="bottom-half">
+                                <div class="flip-text">0</div>
+                            </div>
+                            <div class="top-flip">
+                                <div class="flip-text">0</div>
+                            </div>
+                            <div class="bottom-flip">
+                                <div class="flip-text">0</div>
+                            </div>
+                        </div>
+                        <!-- Minutes Ones -->
+                        <div class="flip-unit" id="m-one">
+                            <div class="top-half">
+                                <div class="flip-text">0</div>
+                            </div>
+                            <div class="bottom-half">
+                                <div class="flip-text">0</div>
+                            </div>
+                            <div class="top-flip">
+                                <div class="flip-text">0</div>
+                            </div>
+                            <div class="bottom-flip">
+                                <div class="flip-text">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Info Section -->
+                    <div class="info-section">
+                        <div class="info-item date">
+                            <span id="date-text">----/--/-- (--)</span>
+                        </div>
+                        <div class="info-item weather">
+                            <div class="weather-icon" id="weather-icon"></div>
+                            <div class="weather-text-group">
+                                <span id="temperature">--°C</span>
+                                <span id="weather-desc"></span>
+                                <span id="humidity" class="humidity-text">Humidity: --%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGE 2: Dashboard -->
+            <div class="page page-info">
+                <div class="dashboard-grid">
+                    <div class="card schedule-card">
+                        <h2>Today's Schedule</h2>
+                        <div id="schedule-list">
+                            <!-- Helper for empty state or loading -->
+                            <div class="schedule-item">Loading...</div>
+                        </div>
+                    </div>
+                    <div class="card news-card">
+                        <h2>News Feed</h2>
+                        <div id="news-list">
+                            <!-- News with QR codes -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dots Indicator -->
+    <div class="pagination">
+        <div class="dot active" id="dot-0"></div>
+        <div class="dot" id="dot-1"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
