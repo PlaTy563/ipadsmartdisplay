@@ -251,27 +251,34 @@ async function fetchSchedule() {
 }
 
 async function fetchNews() {
-    // Yahoo News Topics (Top Picks)
     const RSS_URL = 'https://news.yahoo.co.jp/rss/topics/top-picks.xml';
-    const API_ENDPOINT = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(RSS_URL)}`;
+    // Use AllOrigins as a stable CORS proxy
+    const PROXY_URL = `https://api.allorigins.win/get?url=${encodeURIComponent(RSS_URL)}`;
 
     try {
-        const response = await fetch(API_ENDPOINT);
+        const response = await fetch(PROXY_URL);
         if (!response.ok) throw new Error('News Fetch Failed');
         const data = await response.json();
 
-        if (data.status === 'ok') {
+        // AllOrigins returns the content in data.contents
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(data.contents, "text/xml");
+        const items = xmlDoc.querySelectorAll("item");
+
+        if (items.length > 0) {
             let html = '';
             // Display top 5 items
-            data.items.slice(0, 5).forEach(item => {
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(item.link)}`;
-                // Yahoo RSS titles often contain full-width spaces, maybe clean up if needed, but usually fine.
-                // item.title, item.link, item.pubDate
+            // NodeList is not directly iterable with slice, convert to array
+            Array.from(items).slice(0, 5).forEach(item => {
+                const title = item.querySelector("title").textContent;
+                const link = item.querySelector("link").textContent;
+
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(link)}`;
 
                 html += `
                     <div class="news-item">
                         <div class="news-content">
-                            <div class="news-title">${item.title}</div>
+                            <div class="news-title">${title}</div>
                             <div class="news-source">Yahoo! News</div>
                         </div>
                         <div class="news-qr">
@@ -281,10 +288,13 @@ async function fetchNews() {
                 `;
             });
             els.news.innerHTML = html;
+        } else {
+            els.news.innerHTML = '<div class="news-item">No news found</div>';
         }
     } catch (e) {
         console.error(e);
-        els.news.innerHTML = '<div class="news-item">News Load Error</div>';
+        // Fallback or retry?
+        els.news.innerHTML = '<div class="news-item">News Load Error (Proxy)</div>';
     }
 }
 
