@@ -198,56 +198,94 @@ function updateDots() {
 
 // --- Dashboard Logic (Schedule & QR News) ---
 
-function renderSchedule() {
-    // Mock Schedule Data
-    const scheduleData = [
-        { time: '09:00', title: '朝会 / Morning Meeting' },
-        { time: '10:30', title: 'デザインレビュー' },
-        { time: '12:00', title: 'ランチ' },
-        { time: '14:00', title: '開発集中タイム' },
-        { time: '18:00', title: 'ジムに行く' },
-        { time: '20:00', title: '映画鑑賞' }
-    ];
+// Google Calendar Config (GAS)
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyHkDUmYmHzqE9wAnPew2fxn80DP8gMID5A2enVLVIZzTCNaVzzQ6Zu7CQc7gwRo8Ss/exec';
 
-    let html = '';
-    scheduleData.forEach(item => {
-        html += `
-            <div class="schedule-item">
-                <div class="schedule-time">${item.time}</div>
-                <div class="schedule-title">${item.title}</div>
-            </div>
-        `;
-    });
-    els.schedule.innerHTML = html;
+async function fetchSchedule() {
+    if (GAS_URL.includes('YOUR_GAS')) {
+        els.schedule.innerHTML = '<div class="schedule-item">Set GAS URL</div>';
+        return;
+    }
+
+    try {
+        const response = await fetch(GAS_URL);
+        if (!response.ok) throw new Error('Calendar Fetch Failed');
+        const data = await response.json();
+
+        if (data.error) {
+            els.schedule.innerHTML = `<div class="schedule-item">${data.error}</div>`;
+            return;
+        }
+
+        if (!data || data.length === 0) {
+            els.schedule.innerHTML = '<div class="schedule-item">No events</div>';
+            return;
+        }
+
+        let html = '';
+        data.forEach(item => {
+            // Parse time
+            const start = item.startTime; // ISO string
+            const dateObj = new Date(start);
+
+            // Format time: "10:00" or "All Day"
+            const timeStr = item.isAllDay
+                ? 'All Day'
+                : dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+            const title = item.title || '(No Title)';
+
+            html += `
+                <div class="schedule-item">
+                    <div class="schedule-time">${timeStr}</div>
+                    <div class="schedule-title">${title}</div>
+                </div>
+            `;
+        });
+        els.schedule.innerHTML = html;
+
+    } catch (e) {
+        console.error(e);
+        els.schedule.innerHTML = '<div class="schedule-item">Cal Load Error</div>';
+    }
 }
 
-function fetchNews() {
-    // Mock News with URLs
-    const newsData = [
-        { title: "JAXA新型ロケット打ち上げ成功、軌道投入", source: "Science Daily", url: "https://www.jaxa.jp" },
-        { title: "Apple、新しいiPadシリーズを発表か", source: "Tech News", url: "https://www.apple.com" },
-        { title: "東京都心の気温、12月としては異例の暖かさ", source: "Weather JP", url: "https://weather.yahoo.co.jp" },
-        { title: "円相場、一時145円台前半で推移", source: "Finance Watch", url: "https://finance.yahoo.co.jp" }
-    ];
+async function fetchNews() {
+    // Yahoo News Topics (Top Picks)
+    const RSS_URL = 'https://news.yahoo.co.jp/rss/topics/top-picks.xml';
+    const API_ENDPOINT = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(RSS_URL)}`;
 
-    let html = '';
-    newsData.forEach(item => {
-        // Generate QR Code URL (using qrserver API)
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(item.url)}`;
+    try {
+        const response = await fetch(API_ENDPOINT);
+        if (!response.ok) throw new Error('News Fetch Failed');
+        const data = await response.json();
 
-        html += `
-            <div class="news-item">
-                <div class="news-content">
-                    <div class="news-title">${item.title}</div>
-                    <div class="news-source">${item.source}</div>
-                </div>
-                <div class="news-qr">
-                    <img src="${qrUrl}" alt="QR Code">
-                </div>
-            </div>
-        `;
-    });
-    els.news.innerHTML = html;
+        if (data.status === 'ok') {
+            let html = '';
+            // Display top 5 items
+            data.items.slice(0, 5).forEach(item => {
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(item.link)}`;
+                // Yahoo RSS titles often contain full-width spaces, maybe clean up if needed, but usually fine.
+                // item.title, item.link, item.pubDate
+
+                html += `
+                    <div class="news-item">
+                        <div class="news-content">
+                            <div class="news-title">${item.title}</div>
+                            <div class="news-source">Yahoo! News</div>
+                        </div>
+                        <div class="news-qr">
+                            <img src="${qrUrl}" alt="QR">
+                        </div>
+                    </div>
+                `;
+            });
+            els.news.innerHTML = html;
+        }
+    } catch (e) {
+        console.error(e);
+        els.news.innerHTML = '<div class="news-item">News Load Error</div>';
+    }
 }
 
 // Init
@@ -262,5 +300,6 @@ if (typeof DEBUG_WEATHER !== 'undefined' && DEBUG_WEATHER) {
     setInterval(fetchWeather, 600000);
 }
 
-renderSchedule();
+fetchSchedule();
+setInterval(fetchSchedule, 600000); // 10 min
 fetchNews();
