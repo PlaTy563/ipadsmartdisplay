@@ -198,7 +198,9 @@ function updateDots() {
 
 // --- Dashboard Logic (Schedule & QR News) ---
 
-// Google Calendar Config (GAS)
+// Google Calendar & News Config (GAS)
+// Keep the same URL variable, assuming user keeps the same deployment URL
+// const GAS_URL = '...'; (Already defined above)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyHkDUmYmHzqE9wAnPew2fxn80DP8gMID5A2enVLVIZzTCNaVzzQ6Zu7CQc7gwRo8Ss/exec';
 
 async function fetchSchedule() {
@@ -208,7 +210,8 @@ async function fetchSchedule() {
     }
 
     try {
-        const response = await fetch(GAS_URL);
+        // Fetch Calendar (default or type=calendar)
+        const response = await fetch(`${GAS_URL}?type=calendar`);
         if (!response.ok) throw new Error('Calendar Fetch Failed');
         const data = await response.json();
 
@@ -251,34 +254,29 @@ async function fetchSchedule() {
 }
 
 async function fetchNews() {
-    const RSS_URL = 'https://news.yahoo.co.jp/rss/topics/top-picks.xml';
-    // Use AllOrigins as a stable CORS proxy
-    const PROXY_URL = `https://api.allorigins.win/get?url=${encodeURIComponent(RSS_URL)}`;
+    if (GAS_URL.includes('YOUR_GAS')) {
+        els.news.innerHTML = '<div class="news-item">Set GAS URL</div>';
+        return;
+    }
 
     try {
-        const response = await fetch(PROXY_URL);
+        // Fetch News via GAS
+        const response = await fetch(`${GAS_URL}?type=news`);
         if (!response.ok) throw new Error('News Fetch Failed');
         const data = await response.json();
 
-        // AllOrigins returns the content in data.contents
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(data.contents, "text/xml");
-        const items = xmlDoc.querySelectorAll("item");
+        if (data.error) {
+            throw new Error(data.error);
+        }
 
-        if (items.length > 0) {
+        if (data && data.length > 0) {
             let html = '';
-            // Display top 5 items
-            // NodeList is not directly iterable with slice, convert to array
-            Array.from(items).slice(0, 5).forEach(item => {
-                const title = item.querySelector("title").textContent;
-                const link = item.querySelector("link").textContent;
-
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(link)}`;
-
+            data.forEach(item => {
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(item.link)}`;
                 html += `
                     <div class="news-item">
                         <div class="news-content">
-                            <div class="news-title">${title}</div>
+                            <div class="news-title">${item.title}</div>
                             <div class="news-source">Yahoo! News</div>
                         </div>
                         <div class="news-qr">
@@ -293,8 +291,7 @@ async function fetchNews() {
         }
     } catch (e) {
         console.error(e);
-        // Fallback or retry?
-        els.news.innerHTML = '<div class="news-item">News Load Error (Proxy)</div>';
+        els.news.innerHTML = '<div class="news-item">News Load Error (GAS)</div>';
     }
 }
 
