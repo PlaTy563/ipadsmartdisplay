@@ -199,9 +199,23 @@ function updateDots() {
 // --- Dashboard Logic (Schedule & QR News) ---
 
 // Google Calendar & News Config (GAS)
-// Keep the same URL variable, assuming user keeps the same deployment URL
-// const GAS_URL = '...'; (Already defined above)
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyHkDUmYmHzqE9wAnPew2fxn80DP8gMID5A2enVLVIZzTCNaVzzQ6Zu7CQc7gwRo8Ss/exec';
+
+// Idle Timer Logic
+let idleTimer;
+function resetIdleTimer() {
+    clearTimeout(idleTimer);
+    if (currentIndex !== 0) {
+        idleTimer = setTimeout(() => {
+            currentIndex = 0;
+            setPositionByIndex();
+        }, 60000); // 1 minute
+    }
+}
+
+// Global click/touch listener for idle reset
+window.addEventListener('mousedown', resetIdleTimer);
+window.addEventListener('touchstart', resetIdleTimer);
 
 async function fetchSchedule() {
     if (GAS_URL.includes('YOUR_GAS')) {
@@ -210,7 +224,6 @@ async function fetchSchedule() {
     }
 
     try {
-        // Fetch Calendar (default or type=calendar)
         const response = await fetch(`${GAS_URL}?type=calendar`);
         if (!response.ok) throw new Error('Calendar Fetch Failed');
         const data = await response.json();
@@ -225,13 +238,22 @@ async function fetchSchedule() {
             return;
         }
 
-        let html = '';
-        data.forEach(item => {
-            // Parse time
-            const start = item.startTime; // ISO string
-            const dateObj = new Date(start);
+        // --- Filter for TODAY only ---
+        const todayStr = new Date().toDateString();
+        const todayEvents = data.filter(item => {
+            const eventDate = new Date(item.startTime).toDateString();
+            return eventDate === todayStr;
+        });
 
-            // Format time: "10:00" or "All Day"
+        if (todayEvents.length === 0) {
+            els.schedule.innerHTML = '<div class="schedule-item">No events today</div>';
+            return;
+        }
+
+        let html = '';
+        todayEvents.forEach(item => {
+            const start = item.startTime;
+            const dateObj = new Date(start);
             const timeStr = item.isAllDay
                 ? 'All Day'
                 : dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -260,21 +282,19 @@ async function fetchNews() {
     }
 
     try {
-        // Fetch News via GAS
+        els.news.innerHTML = '<div class="news-item">Updating...</div>';
         const response = await fetch(`${GAS_URL}?type=news`);
         if (!response.ok) throw new Error('News Fetch Failed');
         const data = await response.json();
 
-        if (data.error) {
-            throw new Error(data.error);
-        }
+        if (data.error) throw new Error(data.error);
 
         if (data && data.length > 0) {
             let html = '';
             data.forEach(item => {
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(item.link)}`;
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(item.link)}`;
                 html += `
-                    <div class="news-item">
+                    <div class="news-item" onclick="openQrModal('${qrUrl}', '${item.title.replace(/'/g, "\\'")}')">
                         <div class="news-content">
                             <div class="news-title">${item.title}</div>
                             <div class="news-source">Yahoo! News</div>
@@ -291,9 +311,40 @@ async function fetchNews() {
         }
     } catch (e) {
         console.error(e);
-        els.news.innerHTML = '<div class="news-item">News Load Error (GAS)</div>';
+        els.news.innerHTML = '<div class="news-item">News Load Error</div>';
     }
 }
+
+// --- Modal Logic ---
+const modal = document.getElementById('qr-modal');
+const modalQr = document.getElementById('modal-qr-container');
+const modalTitle = document.getElementById('modal-news-title');
+const closeBtn = document.querySelector('.close-modal');
+
+function openQrModal(qrUrl, title) {
+    modalQr.innerHTML = `<img src="${qrUrl}" alt="QR Large">`;
+    modalTitle.innerText = title;
+    modal.style.display = 'flex';
+    resetIdleTimer(); // Reset timer when modal opens
+}
+
+function closeQrModal() {
+    modal.style.display = 'none';
+}
+
+closeBtn.onclick = closeQrModal;
+window.onclick = (event) => {
+    if (event.target == modal) {
+        closeQrModal();
+    }
+};
+
+// Refresh News Button
+document.getElementById('refresh-news').addEventListener('click', (e) => {
+    e.stopPropagation();
+    fetchNews();
+    resetIdleTimer();
+});
 
 // Init
 updateClock();
@@ -310,3 +361,5 @@ if (typeof DEBUG_WEATHER !== 'undefined' && DEBUG_WEATHER) {
 fetchSchedule();
 setInterval(fetchSchedule, 600000); // 10 min
 fetchNews();
+// Periodic news fetch (e.g. every 30 min)
+setInterval(fetchNews, 1800000);
