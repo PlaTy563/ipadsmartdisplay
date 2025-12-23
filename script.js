@@ -224,6 +224,7 @@ async function fetchSchedule() {
     }
 
     try {
+        els.schedule.innerHTML = '<div class="schedule-item">Updating...</div>';
         const response = await fetch(`${GAS_URL}?type=calendar`);
         if (!response.ok) throw new Error('Calendar Fetch Failed');
         const data = await response.json();
@@ -339,10 +340,16 @@ window.onclick = (event) => {
     }
 };
 
-// Refresh News Button
+// Refresh buttons
 document.getElementById('refresh-news').addEventListener('click', (e) => {
     e.stopPropagation();
     fetchNews();
+    resetIdleTimer();
+});
+
+document.getElementById('refresh-schedule').addEventListener('click', (e) => {
+    e.stopPropagation();
+    fetchSchedule();
     resetIdleTimer();
 });
 
